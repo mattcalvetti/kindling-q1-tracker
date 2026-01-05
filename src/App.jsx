@@ -84,7 +84,23 @@ const STORAGE_KEY = 'kindling-q1-tracker-v2';
 // Debounced textarea component
 function DebouncedTextarea({ value, onChange, ...props }) {
   const [local, setLocal] = useState(value);
-  const timeout = useRef(null);
+
+  useEffect(() => {
+    setLocal(value);
+  }, [value]);
+
+  const handleChange = (e) => {
+    setLocal(e.target.value);
+  };
+
+  const handleBlur = () => {
+    if (local !== value) {
+      onChange(local);
+    }
+  };
+
+  return <textarea value={local} onChange={handleChange} onBlur={handleBlur} {...props} />;
+}
 
   useEffect(() => {
     setLocal(value);
