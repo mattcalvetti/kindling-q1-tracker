@@ -13,15 +13,15 @@ const EMOTIONAL_CODES = ['Power', 'Order', 'Curiosity', 'Status', 'Tranquility',
 
 const SPRINT_DATES = {
   'January': [
-    { label: 'W3-4', range: 'Jan 13–24', close: 'Fri 24th Jan, 3pm' }
+    { label: 'W3-4', range: 'Mon 20th – Fri 31st Jan', close: 'Fri 17th Jan, 3pm' }
   ],
   'February': [
-    { label: 'W1-2', range: 'Jan 27 – Feb 7', close: 'Fri 7th Feb, 3pm' },
-    { label: 'W3-4', range: 'Feb 10–21', close: 'Fri 21st Feb, 3pm' }
+    { label: 'W1-2', range: 'Mon 3rd – Fri 14th Feb', close: 'Fri 31st Jan, 3pm' },
+    { label: 'W3-4', range: 'Mon 17th – Fri 28th Feb', close: 'Fri 14th Feb, 3pm' }
   ],
   'March': [
-    { label: 'W1-2', range: 'Feb 24 – Mar 7', close: 'Fri 7th Mar, 3pm' },
-    { label: 'W3-4', range: 'Mar 10–21', close: 'Fri 21st Mar, 3pm' }
+    { label: 'W1-2', range: 'Mon 3rd – Fri 14th Mar', close: 'Fri 28th Feb, 3pm' },
+    { label: 'W3-4', range: 'Mon 17th – Fri 28th Mar', close: 'Fri 14th Mar, 3pm' }
   ]
 };
 
