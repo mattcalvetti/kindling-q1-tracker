@@ -79,7 +79,7 @@ export default function App() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [strat, setStrat] = useState('Nick');
-  const [month, setMonth] = useState('February');
+  const [month, setMonth] = useState('January');
   const [view, setView] = useState('checklist');
 
   useEffect(() => {
