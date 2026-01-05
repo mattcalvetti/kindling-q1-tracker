@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const TEAM = {
   'Nick': ['Carlo', 'Build Club'],
@@ -35,21 +35,26 @@ const getMonthConfig = (month) => {
 
 const initData = () => {
   const d = {};
-  Object.keys(TEAM).forEach(strat => {
+  Object.entries(TEAM).forEach(([strat, customers]) => {
     d[strat] = {};
     MONTHS.forEach(month => {
       const config = getMonthConfig(month);
       d[strat][month] = {
-        planning: {
+        customers: {},
+        sprints: {},
+        reporting: {}
+      };
+      // Per-customer planning
+      customers.forEach(customer => {
+        d[strat][month].customers[customer] = {
           narrativeArc: { done: false, notes: '' },
           emotionalCodes: { done: false, selected: [] },
           capacityConfirmed: { done: false },
           calendarSent: { done: false },
           customerSignoff: { done: false }
-        },
-        sprints: {},
-        reporting: {}
-      };
+        };
+      });
+      // Sprints (shared across customers for now)
       config.sprints.forEach(sp => {
         d[strat][month].sprints[sp.label] = {
           scopeNotes: '',
@@ -60,6 +65,7 @@ const initData = () => {
           cleanRunway: false
         };
       });
+      // Reporting
       config.reportingPeriods.forEach(rp => {
         d[strat][month].reporting[rp] = {
           performanceSignals: false,
@@ -73,7 +79,28 @@ const initData = () => {
   return d;
 };
 
-const STORAGE_KEY = 'kindling-q1-tracker';
+const STORAGE_KEY = 'kindling-q1-tracker-v2';
+
+// Debounced textarea component
+function DebouncedTextarea({ value, onChange, ...props }) {
+  const [local, setLocal] = useState(value);
+  const timeout = useRef(null);
+
+  useEffect(() => {
+    setLocal(value);
+  }, [value]);
+
+  const handleChange = (e) => {
+    const newValue = e.target.value;
+    setLocal(newValue);
+    clearTimeout(timeout.current);
+    timeout.current = setTimeout(() => {
+      onChange(newValue);
+    }, 300);
+  };
+
+  return <textarea value={local} onChange={handleChange} {...props} />;
+}
 
 export default function App() {
   const [data, setData] = useState(null);
@@ -124,17 +151,22 @@ export default function App() {
     const md = data[strategist][m];
     let done = 0, total = 0;
     
-    Object.values(md.planning).forEach(v => {
-      total++;
-      if (typeof v === 'object' ? v.done : v) done++;
+    // Customer planning
+    Object.values(md.customers).forEach(customer => {
+      Object.values(customer).forEach(v => {
+        total++;
+        if (typeof v === 'object' ? v.done : v) done++;
+      });
     });
     
+    // Sprints
     Object.values(md.sprints).forEach(sp => {
       ['scopeLocked', 'allScheduled', 'qaComplete', 'zeroTypos', 'cleanRunway'].forEach(k => {
         total++; if (sp[k]) done++;
       });
     });
     
+    // Reporting
     Object.values(md.reporting).forEach(rp => {
       ['performanceSignals', 'qualitativeWins', 'nextSteps'].forEach(k => {
         total++; if (rp[k]) done++;
@@ -163,6 +195,7 @@ export default function App() {
   const md = data?.[strat]?.[month];
   const config = getMonthConfig(month);
   const alerts = getDueToday();
+  const customers = TEAM[strat];
 
   const Pill = ({ active, onClick, children }) => (
     <button onClick={onClick} style={{
@@ -230,11 +263,11 @@ export default function App() {
 
       {view === 'overview' ? (
         <div style={{ display: 'grid', gap: 16 }}>
-          {Object.entries(TEAM).map(([name, customers]) => (
+          {Object.entries(TEAM).map(([name, custs]) => (
             <div key={name} style={{ padding: 16, border: '1px solid #e5e5e5', borderRadius: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                 <span style={{ fontWeight: 600 }}>{name}</span>
-                <span style={{ fontSize: 13, opacity: 0.5 }}>{customers.join(', ')}</span>
+                <span style={{ fontSize: 13, opacity: 0.5 }}>{custs.join(', ')}</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12 }}>
                 {MONTHS.map(m => {
@@ -260,7 +293,7 @@ export default function App() {
           <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
             {MONTHS.map(m => <Pill key={m} active={month === m} onClick={() => setMonth(m)}>{m}</Pill>)}
           </div>
-          <p style={{ fontSize: 13, opacity: 0.5, marginBottom: 20 }}>Customers: {TEAM[strat].join(', ')}</p>
+          <p style={{ fontSize: 13, opacity: 0.5, marginBottom: 20 }}>Customers: {customers.join(', ')}</p>
 
           {md && (
             <>
@@ -269,36 +302,48 @@ export default function App() {
                 <p style={{ fontSize: 12, opacity: 0.5, marginTop: 6 }}>{getProgress(strat, month).pct}% complete</p>
               </div>
 
-              <Section title="Monthly Planning" sub="Calendar to customer by 20th · Sign-off by 23rd">
-                <Check checked={md.planning.narrativeArc.done} onChange={() => toggle('planning.narrativeArc.done')} label="Narrative arc defined" sub="What's the story this month?" />
-                <textarea
-                  value={md.planning.narrativeArc.notes}
-                  onChange={e => update('planning.narrativeArc.notes', e.target.value)}
-                  placeholder="Describe the monthly narrative arc..."
-                  style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #e5e5e5', fontSize: 14, fontFamily: 'Georgia, serif', resize: 'vertical', minHeight: 60, marginBottom: 12, boxSizing: 'border-box' }}
-                />
-                
-                <Check checked={md.planning.emotionalCodes.done} onChange={() => toggle('planning.emotionalCodes.done')} label="Emotional codes selected" sub="Primary codes for this month's content" />
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16, marginLeft: 34 }}>
-                  {EMOTIONAL_CODES.map(code => {
-                    const sel = md.planning.emotionalCodes.selected?.includes(code);
-                    return (
-                      <button key={code} onClick={() => {
-                        const curr = md.planning.emotionalCodes.selected || [];
-                        update('planning.emotionalCodes.selected', sel ? curr.filter(c => c !== code) : [...curr, code]);
-                      }} style={{
-                        padding: '4px 10px', borderRadius: 12, fontSize: 12, cursor: 'pointer',
-                        border: sel ? '1px solid #000' : '1px solid #ddd',
-                        backgroundColor: sel ? '#000' : '#fff', color: sel ? '#fff' : '#666'
-                      }}>{code}</button>
-                    );
-                  })}
-                </div>
+              {customers.map(customer => (
+                <Section key={customer} title={`${customer} – Monthly Planning`} sub="Calendar to customer by 20th · Sign-off by 23rd">
+                  <Check 
+                    checked={md.customers[customer]?.narrativeArc.done} 
+                    onChange={() => toggle(`customers.${customer}.narrativeArc.done`)} 
+                    label="Narrative arc defined" 
+                    sub="What's the story this month?" 
+                  />
+                  <DebouncedTextarea
+                    value={md.customers[customer]?.narrativeArc.notes || ''}
+                    onChange={(val) => update(`customers.${customer}.narrativeArc.notes`, val)}
+                    placeholder="Describe the monthly narrative arc..."
+                    style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #e5e5e5', fontSize: 14, fontFamily: 'Georgia, serif', resize: 'vertical', minHeight: 60, marginBottom: 12, boxSizing: 'border-box' }}
+                  />
+                  
+                  <Check 
+                    checked={md.customers[customer]?.emotionalCodes.done} 
+                    onChange={() => toggle(`customers.${customer}.emotionalCodes.done`)} 
+                    label="Emotional codes selected" 
+                    sub="Primary codes for this month's content" 
+                  />
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16, marginLeft: 34 }}>
+                    {EMOTIONAL_CODES.map(code => {
+                      const sel = md.customers[customer]?.emotionalCodes.selected?.includes(code);
+                      return (
+                        <button key={code} onClick={() => {
+                          const curr = md.customers[customer]?.emotionalCodes.selected || [];
+                          update(`customers.${customer}.emotionalCodes.selected`, sel ? curr.filter(c => c !== code) : [...curr, code]);
+                        }} style={{
+                          padding: '4px 10px', borderRadius: 12, fontSize: 12, cursor: 'pointer',
+                          border: sel ? '1px solid #000' : '1px solid #ddd',
+                          backgroundColor: sel ? '#000' : '#fff', color: sel ? '#fff' : '#666'
+                        }}>{code}</button>
+                      );
+                    })}
+                  </div>
 
-                <Check checked={md.planning.capacityConfirmed} onChange={() => toggle('planning.capacityConfirmed')} label="Capacity confirmed" sub="Team can deliver this scope" />
-                <Check checked={md.planning.calendarSent} onChange={() => toggle('planning.calendarSent')} label="Monthly calendar sent to customer" sub="Due by 20th" />
-                <Check checked={md.planning.customerSignoff} onChange={() => toggle('planning.customerSignoff')} label="Customer sign-off locked" sub="Due by 23rd" />
-              </Section>
+                  <Check checked={md.customers[customer]?.capacityConfirmed} onChange={() => toggle(`customers.${customer}.capacityConfirmed`)} label="Capacity confirmed" sub="Team can deliver this scope" />
+                  <Check checked={md.customers[customer]?.calendarSent} onChange={() => toggle(`customers.${customer}.calendarSent`)} label="Monthly calendar sent to customer" sub="Due by 20th" />
+                  <Check checked={md.customers[customer]?.customerSignoff} onChange={() => toggle(`customers.${customer}.customerSignoff`)} label="Customer sign-off locked" sub="Due by 23rd" />
+                </Section>
+              ))}
 
               {config.sprints.map(sprint => {
                 const sp = md.sprints[sprint.label];
@@ -307,19 +352,19 @@ export default function App() {
                   <Section key={sprint.label} title={`Sprint ${sprint.label}`} sub={`${sprint.range} · Close: ${sprint.close}`}>
                     <div style={{ marginBottom: 16 }}>
                       <label style={{ fontSize: 13, opacity: 0.6, display: 'block', marginBottom: 6 }}>What's in scope this sprint?</label>
-                      <textarea
-                        value={sp.scopeNotes}
-                        onChange={e => update(`sprints.${sprint.label}.scopeNotes`, e.target.value)}
+                      <DebouncedTextarea
+                        value={sp?.scopeNotes || ''}
+                        onChange={(val) => update(`sprints.${sprint.label}.scopeNotes`, val)}
                         placeholder="List the content pieces, shoots, edits..."
                         style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #e5e5e5', fontSize: 14, fontFamily: 'Georgia, serif', resize: 'vertical', minHeight: 70, boxSizing: 'border-box' }}
                       />
                     </div>
 
-                    <Check checked={sp.scopeLocked} onChange={() => toggle(`sprints.${sprint.label}.scopeLocked`)} label="Scope locked" sub="No changes without a swap or deferral" />
-                    <Check checked={sp.allScheduled} onChange={() => toggle(`sprints.${sprint.label}.allScheduled`)} label="All content scheduled" sub="2 weeks of content ready to go" />
-                    <Check checked={sp.qaComplete} onChange={() => toggle(`sprints.${sprint.label}.qaComplete`)} label="QA complete" />
-                    <Check checked={sp.zeroTypos} onChange={() => toggle(`sprints.${sprint.label}.zeroTypos`)} label="Zero typos verified" />
-                    <Check checked={sp.cleanRunway} onChange={() => toggle(`sprints.${sprint.label}.cleanRunway`)} label="Clean runway for customer" />
+                    <Check checked={sp?.scopeLocked} onChange={() => toggle(`sprints.${sprint.label}.scopeLocked`)} label="Scope locked" sub="No changes without a swap or deferral" />
+                    <Check checked={sp?.allScheduled} onChange={() => toggle(`sprints.${sprint.label}.allScheduled`)} label="All content scheduled" sub="2 weeks of content ready to go" />
+                    <Check checked={sp?.qaComplete} onChange={() => toggle(`sprints.${sprint.label}.qaComplete`)} label="QA complete" />
+                    <Check checked={sp?.zeroTypos} onChange={() => toggle(`sprints.${sprint.label}.zeroTypos`)} label="Zero typos verified" />
+                    <Check checked={sp?.cleanRunway} onChange={() => toggle(`sprints.${sprint.label}.cleanRunway`)} label="Clean runway for customer" />
                   </Section>
                 );
               })}
@@ -330,11 +375,15 @@ export default function App() {
                   return (
                     <div key={rp} style={{ marginBottom: 20 }}>
                       {config.reportingPeriods.length > 1 && <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, opacity: 0.7 }}>{rp}</p>}
-                      <Check checked={r.performanceSignals} onChange={() => toggle(`reporting.${rp}.performanceSignals`)} label="Performance signals included" />
-                      <Check checked={r.qualitativeWins} onChange={() => toggle(`reporting.${rp}.qualitativeWins`)} label="Screenshots / qualitative wins" />
-                      <Check checked={r.nextSteps} onChange={() => toggle(`reporting.${rp}.nextSteps`)} label='"What this enables next" documented' />
-                      <textarea value={r.notes} onChange={e => update(`reporting.${rp}.notes`, e.target.value)}
-                        placeholder="Report notes..." style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #e5e5e5', fontSize: 13, resize: 'vertical', minHeight: 50, marginTop: 8, boxSizing: 'border-box' }} />
+                      <Check checked={r?.performanceSignals} onChange={() => toggle(`reporting.${rp}.performanceSignals`)} label="Performance signals included" />
+                      <Check checked={r?.qualitativeWins} onChange={() => toggle(`reporting.${rp}.qualitativeWins`)} label="Screenshots / qualitative wins" />
+                      <Check checked={r?.nextSteps} onChange={() => toggle(`reporting.${rp}.nextSteps`)} label='"What this enables next" documented' />
+                      <DebouncedTextarea 
+                        value={r?.notes || ''} 
+                        onChange={(val) => update(`reporting.${rp}.notes`, val)}
+                        placeholder="Report notes..." 
+                        style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #e5e5e5', fontSize: 13, resize: 'vertical', minHeight: 50, marginTop: 8, boxSizing: 'border-box' }} 
+                      />
                     </div>
                   );
                 })}
