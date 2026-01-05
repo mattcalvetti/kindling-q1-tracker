@@ -303,7 +303,7 @@ export default function App() {
               </div>
 
               {customers.map(customer => (
-                <Section key={customer} title={`${customer} – Monthly Planning`} sub="Calendar to customer by 20th · Sign-off by 23rd">
+                <Section key={customer} title={`${customer} – Monthly Planning`} sub={`${month === 'January' ? 'February' : month === 'February' ? 'March' : 'April'} calendar to customer by 20th · Sign-off by 23rd`}>
                   <Check 
                     checked={md.customers[customer]?.narrativeArc.done} 
                     onChange={() => toggle(`customers.${customer}.narrativeArc.done`)} 
