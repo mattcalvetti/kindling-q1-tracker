@@ -104,12 +104,6 @@ function DebouncedTextarea({ value, onChange, ...props }) {
       {...props} 
     />
   );
-  
-  useEffect(() => {
-    if (!isFocused.current) {
-      setLocal(value);
-    }
-  }, [value]);
 
   return (
     <textarea 
