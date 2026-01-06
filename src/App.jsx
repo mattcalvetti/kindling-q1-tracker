@@ -84,40 +84,37 @@ const STORAGE_KEY = 'kindling-q1-tracker-v2';
 // Debounced textarea component
 function DebouncedTextarea({ value, onChange, ...props }) {
   const [local, setLocal] = useState(value);
-  const isFocused = useRef(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const textareaRef = useRef(null);
 
   useEffect(() => {
-    if (!isFocused.current) {
-      setLocal(value);
+    if (!isFocused) setLocal(value);
+  }, [value, isFocused]);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
     }
-  }, [value]);
+  }, [local]);
 
   return (
-    <textarea 
-      value={local} 
+    <textarea
+      ref={textareaRef}
+      value={local}
       onChange={(e) => setLocal(e.target.value)}
-      onFocus={() => isFocused.current = true}
+      onFocus={() => setIsFocused(true)}
       onBlur={() => {
-        isFocused.current = false;
+        setIsFocused(false);
         if (local !== value) onChange(local);
       }}
-      {...props} 
-    />
-  );
-
-  return (
-    <textarea 
-      value={local} 
-      onChange={(e) => setLocal(e.target.value)}
-      onFocus={() => isFocused.current = true}
-      onBlur={() => {
-        isFocused.current = false;
-        if (local !== value) onChange(local);
-      }}
-      {...props} 
+      {...props}
+      style={{ ...props.style, overflow: 'hidden', resize: 'none' }}
     />
   );
 }
+
+
 
 export default function App() {
   const [data, setData] = useState(null);
@@ -257,9 +254,29 @@ export default function App() {
   return (
     <div style={{ fontFamily: 'Georgia, serif', maxWidth: 720, margin: '0 auto', padding: '24px 16px' }}>
       <header style={{ marginBottom: 24 }}>
-        <p style={{ fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', opacity: 0.4, margin: '0 0 4px' }}>Kindling CS</p>
-        <h1 style={{ fontSize: 24, fontWeight: 400, margin: 0 }}>Q1 2026 Tracker</h1>
-      </header>
+  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+    <div>
+      <p style={{ fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', opacity: 0.4, margin: '0 0 4px' }}>Kindling CS</p>
+      <h1 style={{ fontSize: 24, fontWeight: 400, margin: 0 }}>Q1 2026 Tracker</h1>
+    </div>
+    <button
+      onClick={() => window.print()}
+      className="no-print"
+      style={{
+        padding: '8px 16px',
+        fontSize: 13,
+        fontFamily: 'Georgia, serif',
+        border: '1px solid #e5e5e5',
+        borderRadius: 6,
+        backgroundColor: '#fff',
+        cursor: 'pointer',
+        opacity: 0.7
+      }}
+    >
+      Download PDF
+    </button>
+  </div>
+</header>
 
       {alerts.length > 0 && (
         <div style={{ marginBottom: 24 }}>
@@ -399,7 +416,7 @@ export default function App() {
                         value={r?.notes || ''} 
                         onChange={(val) => update(`reporting.${rp}.notes`, val)}
                         placeholder="Report notes..." 
-                        style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #e5e5e5', fontSize: 13, resize: 'vertical', minHeight: 50, marginTop: 8, boxSizing: 'border-box' }} 
+                        style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #e5e5e5', fontSize: 13, fontFamily: 'Georgia, serif', resize: 'vertical', minHeight: 50, marginTop: 8, boxSizing: 'border-box' }} 
                       />
                     </div>
                   );
