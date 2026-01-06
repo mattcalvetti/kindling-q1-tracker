@@ -13,17 +13,17 @@ const EMOTIONAL_CODES = ['Power', 'Order', 'Curiosity', 'Status', 'Tranquility',
 
 const SPRINT_DATES = {
   'January': [
-    { label: 'W3-4', range: 'Mon 20th – Fri 31st Jan', close: 'Fri 17th Jan, 3pm' }
+    { label: 'W3-4', range: 'Mon 19th – Fri 30th Jan', close: 'Fri 16th Jan, 3pm' }
   ],
   'February': [
-    { label: 'W1-2', range: 'Mon 3rd – Fri 14th Feb', close: 'Fri 31st Jan, 3pm' },
-    { label: 'W3-4', range: 'Mon 17th – Fri 28th Feb', close: 'Fri 14th Feb, 3pm' }
+    { label: 'W1-2', range: 'Mon 2nd – Fri 13th Feb', close: 'Fri 30th Jan, 3pm' },
+    { label: 'W3-4', range: 'Mon 16th – Fri 27th Feb', close: 'Fri 13th Feb, 3pm' }
   ],
   'March': [
-    { label: 'W1-2', range: 'Mon 3rd – Fri 14th Mar', close: 'Fri 28th Feb, 3pm' },
-    { label: 'W3-4', range: 'Mon 17th – Fri 28th Mar', close: 'Fri 14th Mar, 3pm' }
+    { label: 'W1-2', range: 'Mon 2nd – Fri 13th Mar', close: 'Fri 27th Feb, 3pm' },
+    { label: 'W3-4', range: 'Mon 16th – Fri 27th Mar', close: 'Fri 13th Mar, 3pm' }
   ]
-};
+  };
 
 const getMonthConfig = (month) => {
   const sprints = SPRINT_DATES[month] || [];
@@ -104,22 +104,28 @@ function DebouncedTextarea({ value, onChange, ...props }) {
       {...props} 
     />
   );
-}
+}function DebouncedTextarea({ value, onChange, ...props }) {
+  const [local, setLocal] = useState(value);
+  const isFocused = useRef(false);
 
   useEffect(() => {
-    setLocal(value);
+    if (!isFocused.current) {
+      setLocal(value);
+    }
   }, [value]);
 
-  const handleChange = (e) => {
-    const newValue = e.target.value;
-    setLocal(newValue);
-    clearTimeout(timeout.current);
-    timeout.current = setTimeout(() => {
-      onChange(newValue);
-    }, 300);
-  };
-
-  return <textarea value={local} onChange={handleChange} {...props} />;
+  return (
+    <textarea 
+      value={local} 
+      onChange={(e) => setLocal(e.target.value)}
+      onFocus={() => isFocused.current = true}
+      onBlur={() => {
+        isFocused.current = false;
+        if (local !== value) onChange(local);
+      }}
+      {...props} 
+    />
+  );
 }
 
 export default function App() {
