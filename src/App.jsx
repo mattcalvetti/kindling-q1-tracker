@@ -191,18 +191,31 @@ export default function App() {
   };
 
   const getDueToday = () => {
-    const now = new Date();
-    const day = now.getDate();
-    const dow = now.getDay();
-    const alerts = [];
-    
-    if (day >= 15 && day < 20) alerts.push({ level: 'warning', msg: 'Monthly calendar due to customer by 20th' });
-    if (day >= 20 && day <= 23) alerts.push({ level: 'urgent', msg: 'Customer sign-off must be locked by 23rd' });
-    if (dow === 5) alerts.push({ level: 'urgent', msg: 'SPRINT CLOSE: All content must be scheduled by 3pm today' });
-    if (dow === 1) alerts.push({ level: 'info', msg: 'Sprint start: Confirm scope is locked for this fortnight' });
-    
-    return alerts;
-  };
+  const now = new Date();
+  const day = now.getDate();
+  const monthNum = now.getMonth(); // 0 = Jan, 1 = Feb, 2 = Mar
+  const alerts = [];
+  
+  // Sprint close dates: Jan 16, Jan 30, Feb 13, Feb 27, Mar 13, Mar 27
+  const sprintCloseDates = [
+    { month: 0, day: 16 }, // Jan W3-4
+    { month: 0, day: 30 }, // Feb W1-2 (closes in Jan)
+    { month: 1, day: 13 }, // Feb W3-4
+    { month: 1, day: 27 }, // Mar W1-2 (closes in Feb)
+    { month: 2, day: 13 }, // Mar W3-4
+    { month: 2, day: 27 }  // Apr W1-2 (closes in Mar)
+  ];
+  
+  const isSprintClose = sprintCloseDates.some(d => d.month === monthNum && d.day === day);
+  const isSprintCloseEve = sprintCloseDates.some(d => d.month === monthNum && d.day === day + 1);
+  
+  if (day >= 15 && day < 20) alerts.push({ level: 'warning', msg: 'Monthly calendar due to customer by 20th' });
+  if (day >= 20 && day <= 23) alerts.push({ level: 'urgent', msg: 'Customer sign-off must be locked by 23rd' });
+  if (isSprintClose) alerts.push({ level: 'urgent', msg: 'SPRINT CLOSE: All content must be scheduled by 3pm today' });
+  if (isSprintCloseEve) alerts.push({ level: 'warning', msg: 'Sprint closes tomorrow - final push' });
+  
+  return alerts;
+};
 
   if (loading) return <div style={{ fontFamily: 'Georgia, serif', padding: 40, textAlign: 'center' }}>Loading...</div>;
 
